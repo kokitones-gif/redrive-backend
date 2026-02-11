@@ -5,6 +5,7 @@ import React from "react"
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
+import { useAuth } from "@/hooks/use-auth"
 import {
   Car,
   Mail,
@@ -29,9 +30,12 @@ export default function StudentSignupPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirectUrl = searchParams.get("redirect")
+  const { register } = useAuth()
   const [currentStep, setCurrentStep] = useState(1)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState("")
 
   const [formData, setFormData] = useState({
     // ステップ1: アカウント情報
@@ -88,11 +92,26 @@ export default function StudentSignupPage() {
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("[v0] Student signup data:", formData)
-    // redirectパラメータがある場合はそちらにリダイレクト（予約フローに戻る）
-    router.push(redirectUrl || "/mypage")
+    setError("")
+    setIsSubmitting(true)
+    try {
+      const name = `${formData.lastName} ${formData.firstName}`.trim() || formData.email.split("@")[0]
+      await register({
+        email: formData.email,
+        password: formData.password,
+        name,
+        role: "student",
+        phone: formData.phone || undefined,
+      })
+      // 登録成功 → リダイレクト先 or マイページ
+      router.push(redirectUrl || "/mypage")
+    } catch (err: any) {
+      setError(err?.message || "登録に失敗しました。もう一度お試しください。")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const steps = [
@@ -171,6 +190,11 @@ export default function StudentSignupPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit}>
+              {error && (
+                <div className="mb-4 p-3 rounded-md bg-destructive/10 text-destructive text-sm">
+                  {error}
+                </div>
+              )}
               {/* ステップ1: アカウント情報 */}
               {currentStep === 1 && (
                 <div className="space-y-4">
@@ -623,9 +647,9 @@ export default function StudentSignupPage() {
                     <ChevronRight className="h-4 w-4 ml-1" />
                   </Button>
                 ) : (
-                  <Button type="submit" className="h-11 shadow-lg">
-                    登録完了
-                    <CheckCircle2 className="h-4 w-4 ml-1" />
+                  <Button type="submit" className="h-11 shadow-lg" disabled={isSubmitting}>
+                    {isSubmitting ? "登録中..." : "登録完了"}
+                    {!isSubmitting && <CheckCircle2 className="h-4 w-4 ml-1" />}
                   </Button>
                 )}
               </div>

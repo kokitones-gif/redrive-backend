@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
-    return NextResponse.json({ session })
+    return NextResponse.json({ user: session })
   } catch (error) {
     console.error('Session error:', error)
     return NextResponse.json({ error: 'Failed to get session' }, { status: 500 })
