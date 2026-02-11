@@ -80,7 +80,31 @@ export default function StudentSignupPage() {
     updateFormData(field, file)
   }
 
+  const validateStep = (step: number): string | null => {
+    switch (step) {
+      case 1:
+        if (!formData.email) return "メールアドレスを入力してください"
+        if (!/\S+@\S+\.\S+/.test(formData.email)) return "有効なメールアドレスを入力してください"
+        if (formData.password.length < 8) return "パスワードは8文字以上で入力してください"
+        if (formData.password !== formData.confirmPassword) return "パスワードが一致しません"
+        if (!formData.agreeToTerms) return "利用規約に同意してください"
+        return null
+      case 2:
+        if (!formData.lastName || !formData.firstName) return "氏名を入力してください"
+        if (!formData.phone) return "電話番号を入力してください"
+        return null
+      default:
+        return null
+    }
+  }
+
   const handleNext = () => {
+    const validationError = validateStep(currentStep)
+    if (validationError) {
+      setError(validationError)
+      return
+    }
+    setError("")
     if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1)
     }

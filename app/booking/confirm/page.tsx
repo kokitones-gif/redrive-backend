@@ -54,7 +54,7 @@ function BookingConfirmContent() {
     )
   }
 
-  const studentId = user.id // ログインユーザーのIDを使用
+  const studentId = user.userId // ログインユーザーのIDを使用
   const existingPackage = coursePackages.find(
     (pkg) => pkg.studentId === studentId && pkg.instructorId === instructorId && pkg.remainingTickets > 0,
   )

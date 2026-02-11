@@ -53,10 +53,10 @@ export async function POST(request: NextRequest) {
       avatar: user.avatar,
     })
 
-    // Return user data (without password)
+    // Return user data (without password) - userId matches session format
     return NextResponse.json({
       user: {
-        id: user.id,
+        userId: user.id,
         email: user.email,
         name: user.name,
         role: user.role,
