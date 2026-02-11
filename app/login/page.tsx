@@ -3,7 +3,7 @@
 import type React from "react"
 import { useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Car, Mail, Lock, Eye, EyeOff, GraduationCap, User, Loader2 } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import { Button } from "@/components/ui/button"
@@ -14,6 +14,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const redirectUrl = searchParams.get("redirect")
   const { login } = useAuth()
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState("")
@@ -31,7 +33,9 @@ export default function LoginPage() {
     try {
       await login(email, password, userType || "student")
 
-      if (userType === "instructor") {
+      if (redirectUrl) {
+        router.push(redirectUrl)
+      } else if (userType === "instructor") {
         router.push("/instructor-dashboard")
       } else {
         router.push("/mypage")
@@ -257,7 +261,7 @@ export default function LoginPage() {
               <p className="text-sm text-muted-foreground">
                 アカウントをお持ちでない方は
                 <Link
-                  href="/signup"
+                  href={redirectUrl ? `/signup?redirect=${encodeURIComponent(redirectUrl)}` : "/signup"}
                   className="ml-1 font-semibold text-primary hover:text-primary/80 transition-colors"
                 >
                   新規登録

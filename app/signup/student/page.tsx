@@ -4,7 +4,7 @@ import React from "react"
 
 import { useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import {
   Car,
   Mail,
@@ -27,6 +27,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 
 export default function StudentSignupPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const redirectUrl = searchParams.get("redirect")
   const [currentStep, setCurrentStep] = useState(1)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -89,7 +91,8 @@ export default function StudentSignupPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     console.log("[v0] Student signup data:", formData)
-    router.push("/mypage")
+    // redirectパラメータがある場合はそちらにリダイレクト（予約フローに戻る）
+    router.push(redirectUrl || "/mypage")
   }
 
   const steps = [

@@ -8,6 +8,7 @@ import { Avatar } from "@/components/ui/avatar"
 
 import { useState, useEffect, useMemo, useCallback } from "react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/hooks/use-auth"
 import Image from "next/image"
 import Link from "next/link"
 import { User } from "lucide-react"
@@ -35,6 +36,7 @@ interface InstructorDetailProps {
 
 export function InstructorDetail({ instructor }: InstructorDetailProps) {
   const router = useRouter()
+  const { user, isLoading: authLoading } = useAuth()
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null)
   const [selectedCourse, setSelectedCourse] = useState<CoursePrice | null>(null)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
@@ -103,6 +105,15 @@ export function InstructorDetail({ instructor }: InstructorDetailProps) {
 
   const handleBooking = useCallback(() => {
     if (selectedLocation && selectedDate && selectedTimeSlot && selectedCourse) {
+      // 未ログインの場合は会員登録ページへリダイレクト
+      if (!user) {
+        const returnUrl = encodeURIComponent(
+          `/instructor/${instructor.id}`
+        )
+        router.push(`/signup/student?redirect=${returnUrl}`)
+        return
+      }
+
       const travelFee = instructor.travelAreas?.includes(selectedLocation) ? instructor.travelFee || 0 : 0
       const vehicleFee = useInstructorVehicle ? instructor.vehicleFee || 0 : 0
       const total = selectedCourse.price + travelFee + vehicleFee
@@ -111,7 +122,7 @@ export function InstructorDetail({ instructor }: InstructorDetailProps) {
         `/booking/complete?instructor=${instructor.id}&location=${encodeURIComponent(selectedLocation)}&date=${selectedDate}&timeSlot=${selectedTimeSlot}&course=${encodeURIComponent(selectedCourse.name)}&useVehicle=${useInstructorVehicle}&total=${total}`,
       )
     }
-  }, [selectedLocation, selectedDate, selectedTimeSlot, selectedCourse, useInstructorVehicle, instructor, router])
+  }, [selectedLocation, selectedDate, selectedTimeSlot, selectedCourse, useInstructorVehicle, instructor, router, user])
 
   const getTwoWeeksDates = useCallback(
     (startDate: Date) => {
@@ -776,7 +787,7 @@ export function InstructorDetail({ instructor }: InstructorDetailProps) {
                   disabled={!selectedLocation || !selectedDate || !selectedTimeSlot || !selectedCourse}
                   className="w-full h-14 text-lg font-bold bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >
-                  予約リクエストを送る
+                  {user ? "予約リクエストを送る" : "会員登録して予約する"}
                 </Button>
               </CardContent>
             </Card>

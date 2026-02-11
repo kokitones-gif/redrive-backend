@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, Suspense } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import { useAuth } from "@/hooks/use-auth"
 import Image from "next/image"
 import Link from "next/link"
 import { ArrowLeft, Calendar, Clock, MapPin, Car, CreditCard, Shield, Sparkles, Tag, Ticket } from "lucide-react"
@@ -19,6 +20,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 function BookingConfirmContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { user, isLoading: authLoading } = useAuth()
   const [message, setMessage] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [selectedMeetingPoint, setSelectedMeetingPoint] = useState<string>("")
@@ -31,7 +33,28 @@ function BookingConfirmContent() {
 
   const instructor = instructors.find((i) => i.id === instructorId)
 
-  const studentId = "s1" // In real app, get from session/auth
+  // 未ログインの場合は会員登録ページへリダイレクト
+  useEffect(() => {
+    if (!authLoading && !user) {
+      const returnUrl = encodeURIComponent(
+        instructorId ? `/instructor/${instructorId}` : '/'
+      )
+      router.replace(`/signup/student?redirect=${returnUrl}`)
+    }
+  }, [authLoading, user, router, instructorId])
+
+  if (authLoading || !user) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 py-12 text-center">
+          <p className="text-muted-foreground">読み込み中...</p>
+        </div>
+      </div>
+    )
+  }
+
+  const studentId = user.id // ログインユーザーのIDを使用
   const existingPackage = coursePackages.find(
     (pkg) => pkg.studentId === studentId && pkg.instructorId === instructorId && pkg.remainingTickets > 0,
   )
