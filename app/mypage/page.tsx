@@ -2,6 +2,7 @@
 import { useState, memo, useRef, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
+import { useRouter } from "next/navigation"
 import {
   User,
   Calendar,
@@ -17,11 +18,13 @@ import {
   Search,
   CalendarPlus,
   Star,
+  Loader2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useAuth } from "@/hooks/use-auth"
 
 const BookingCard = memo(function BookingCard({
   booking,
@@ -120,154 +123,59 @@ const BookingCard = memo(function BookingCard({
   )
 })
 
+function formatDate(dateStr: string): string {
+  try {
+    const d = new Date(dateStr)
+    return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`
+  } catch {
+    return dateStr
+  }
+}
+
+function mapBooking(booking: any): any {
+  return {
+    id: booking.id,
+    instructor: {
+      name: booking.instructor?.name || "不明",
+      avatar: booking.instructor?.avatar || "/placeholder.svg",
+    },
+    course: booking.course_name || "コース名なし",
+    date: formatDate(booking.date),
+    time: booking.time_slot || "",
+    location: booking.location || "",
+    status: booking.status,
+    hasReview: booking.has_review || false,
+  }
+}
+
 export default function MyPage() {
+  const { user: authUser, loading: authLoading, isAuthenticated } = useAuth()
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState("upcoming")
   const [showUnreviewedOnly, setShowUnreviewedOnly] = useState(false)
   const bookingsRef = useRef<HTMLDivElement>(null)
+  const [dashboard, setDashboard] = useState<any>(null)
+  const [dataLoading, setDataLoading] = useState(true)
 
-  const user = {
-    name: "山田 太郎",
-    email: "yamada@example.com",
-    phone: "090-1234-5678",
-    avatar: "/abstract-geometric-shapes.png",
-    memberSince: "2024年12月",
-  }
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.push("/login")
+    }
+  }, [authLoading, isAuthenticated, router])
 
-  const upcomingBookings = [
-    {
-      id: "1",
-      instructor: {
-        name: "田中 健太",
-        avatar: "/friendly-japanese-male-driving-instructor-in-his-4.jpg",
-      },
-      course: "2時限×7回コース (1/7)",
-      date: "2024年12月15日",
-      time: "10:00-11:40",
-      location: "東京都 渋谷区",
-      status: "confirmed",
-      remainingTickets: 6,
-    },
-    {
-      id: "2",
-      instructor: {
-        name: "山田 美咲",
-        avatar: "/friendly-japanese-female-driving-instructor-in-her.jpg",
-      },
-      course: "2時限×4回コース (1/4)",
-      date: "2024年12月18日",
-      time: "14:00-15:40",
-      location: "東京都 新宿区",
-      status: "confirmed",
-      remainingTickets: 3,
-    },
-  ]
-
-  const pastBookings = [
-    {
-      id: "3",
-      instructor: {
-        name: "鈴木 あゆみ",
-        avatar: "/cheerful-japanese-female-driving-instructor-in-her.jpg",
-      },
-      course: "2時限×10回コース (10/10)",
-      date: "2024年12月8日",
-      time: "10:00-11:40",
-      location: "神奈川県 横浜市",
-      status: "completed",
-      hasReview: false,
-    },
-    {
-      id: "4",
-      instructor: {
-        name: "田中 健太",
-        avatar: "/friendly-japanese-male-driving-instructor-in-his-4.jpg",
-      },
-      course: "2時限×7回コース (4/7)",
-      date: "2024年12月1日",
-      time: "14:00-15:40",
-      location: "東京都 渋谷区",
-      status: "completed",
-      hasReview: false,
-    },
-    {
-      id: "5",
-      instructor: {
-        name: "山田 美咲",
-        avatar: "/friendly-japanese-female-driving-instructor-in-her.jpg",
-      },
-      course: "2時限×10回コース (3/10)",
-      date: "2024年11月25日",
-      time: "10:00-11:40",
-      location: "東京都 新宿区",
-      status: "completed",
-      hasReview: true,
-    },
-    {
-      id: "6",
-      instructor: {
-        name: "田中 健太",
-        avatar: "/friendly-japanese-male-driving-instructor-in-his-4.jpg",
-      },
-      course: "2時限×7回コース (3/7)",
-      date: "2024年11月20日",
-      time: "10:00-11:40",
-      location: "東京都 渋谷区",
-      status: "completed",
-      hasReview: true,
-    },
-    {
-      id: "7",
-      instructor: {
-        name: "山田 美咲",
-        avatar: "/friendly-japanese-female-driving-instructor-in-her.jpg",
-      },
-      course: "2時限×10回コース (2/10)",
-      date: "2024年11月15日",
-      time: "14:00-15:40",
-      location: "東京都 新宿区",
-      status: "completed",
-      hasReview: true,
-    },
-    {
-      id: "8",
-      instructor: {
-        name: "田中 健太",
-        avatar: "/friendly-japanese-male-driving-instructor-in-his-4.jpg",
-      },
-      course: "2時限×7回コース (2/7)",
-      date: "2024年11月10日",
-      time: "10:00-11:40",
-      location: "東京都 渋谷区",
-      status: "completed",
-      hasReview: true,
-    },
-    {
-      id: "9",
-      instructor: {
-        name: "山田 美咲",
-        avatar: "/friendly-japanese-female-driving-instructor-in-her.jpg",
-      },
-      course: "2時限×10回コース (1/10)",
-      date: "2024年11月5日",
-      time: "10:00-11:40",
-      location: "東京都 新宿区",
-      status: "completed",
-      hasReview: true,
-    },
-    {
-      id: "10",
-      instructor: {
-        name: "田中 健太",
-        avatar: "/friendly-japanese-male-driving-instructor-in-his-4.jpg",
-      },
-      course: "2時限×7回コース (1/7)",
-      date: "2024年11月1日",
-      time: "14:00-15:40",
-      location: "東京都 渋谷区",
-      status: "completed",
-      hasReview: true,
-    },
-  ]
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetch("/api/mypage")
+        .then((res) => res.json())
+        .then((data) => {
+          if (!data.error) {
+            setDashboard(data.dashboard)
+          }
+        })
+        .catch(console.error)
+        .finally(() => setDataLoading(false))
+    }
+  }, [isAuthenticated])
 
   useEffect(() => {
     if (activeTab === "past" && showUnreviewedOnly && bookingsRef.current) {
@@ -277,7 +185,29 @@ export default function MyPage() {
     }
   }, [activeTab, showUnreviewedOnly])
 
-  const filteredPastBookings = showUnreviewedOnly ? pastBookings.filter((booking) => !booking.hasReview) : pastBookings
+  if (authLoading || (isAuthenticated && dataLoading)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-secondary/20 to-primary/5">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">読み込み中...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!authUser) return null
+
+  const user = {
+    name: authUser.name,
+    email: authUser.email,
+    avatar: authUser.avatar || "/abstract-geometric-shapes.png",
+  }
+
+  const upcomingBookings = (dashboard?.upcomingBookings || []).map(mapBooking)
+  const pastBookings = (dashboard?.pastBookings || []).map(mapBooking)
+
+  const filteredPastBookings = showUnreviewedOnly ? pastBookings.filter((booking: any) => !booking.hasReview) : pastBookings
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-primary/5">
@@ -359,7 +289,6 @@ export default function MyPage() {
                     <div>
                       <h3 className="text-xl md:text-2xl font-bold">{user.name}</h3>
                       <p className="text-sm text-muted-foreground">{user.email}</p>
-                      <p className="text-xs text-muted-foreground mt-1">会員登録: {user.memberSince}</p>
                     </div>
                     <div className="flex gap-2 w-full">
                       <Button variant="outline" className="flex-1 bg-transparent" asChild>
@@ -388,7 +317,6 @@ export default function MyPage() {
                     <Button variant="ghost" className="w-full justify-start h-12">
                       <MessageSquare className="h-5 w-5 mr-3 text-primary" />
                       <span className="flex-1 text-left">メッセージ</span>
-                      <Badge variant="secondary">2</Badge>
                       <ChevronRight className="h-4 w-4 ml-2 text-muted-foreground" />
                     </Button>
                   </Link>
@@ -436,7 +364,7 @@ export default function MyPage() {
                           </Link>
                         </div>
                       ) : (
-                        upcomingBookings.map((booking) => (
+                        upcomingBookings.map((booking: any) => (
                           <BookingCard key={booking.id} booking={booking} type="upcoming" />
                         ))
                       )}
@@ -460,7 +388,7 @@ export default function MyPage() {
                           )}
                         </div>
                       ) : (
-                        filteredPastBookings.map((booking) => (
+                        filteredPastBookings.map((booking: any) => (
                           <BookingCard key={booking.id} booking={booking} type="past" />
                         ))
                       )}

@@ -1,10 +1,10 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, User, CreditCard, Award as IdCard, Save, Upload, X, Trash2, AlertTriangle } from "lucide-react"
+import { ArrowLeft, User, CreditCard, Award as IdCard, Save, Upload, X, Trash2, AlertTriangle, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -21,34 +21,55 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { useAuth } from "@/hooks/use-auth"
 
 export default function SettingsPage() {
   const router = useRouter()
+  const { user: authUser, loading: authLoading, isAuthenticated, logout } = useAuth()
   const [isSaving, setIsSaving] = useState(false)
+  const [formInitialized, setFormInitialized] = useState(false)
 
-  // ダミーユーザーデータ
   const [formData, setFormData] = useState({
     // 基本情報
-    lastName: "山田",
-    firstName: "太郎",
-    lastNameKana: "ヤマダ",
-    firstNameKana: "タロウ",
-    birthdate: "1990-01-01",
-    email: "yamada@example.com",
-    phone: "090-1234-5678",
-    postalCode: "150-0001",
-    prefecture: "東京都",
-    city: "渋谷区",
-    address: "神宮前1-1-1",
-    building: "マンション101",
+    lastName: "",
+    firstName: "",
+    lastNameKana: "",
+    firstNameKana: "",
+    birthdate: "",
+    email: "",
+    phone: "",
+    postalCode: "",
+    prefecture: "",
+    city: "",
+    address: "",
+    building: "",
 
     // 免許証情報
-    licenseNumber: "123456789012",
+    licenseNumber: "",
     licenseType: "普通自動車第一種",
     transmissionType: "AT",
-    licenseIssueDate: "2010-04-01",
-    licenseExpiryDate: "2027-04-01",
+    licenseIssueDate: "",
+    licenseExpiryDate: "",
   })
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.push("/login")
+    }
+  }, [authLoading, isAuthenticated, router])
+
+  useEffect(() => {
+    if (authUser && !formInitialized) {
+      const nameParts = authUser.name.split(" ")
+      setFormData((prev) => ({
+        ...prev,
+        lastName: nameParts[0] || "",
+        firstName: nameParts.slice(1).join(" ") || "",
+        email: authUser.email,
+      }))
+      setFormInitialized(true)
+    }
+  }, [authUser, formInitialized])
 
   const [licenseFrontImage, setLicenseFrontImage] = useState<File | null>(null)
   const [licenseBackImage, setLicenseBackImage] = useState<File | null>(null)
@@ -75,6 +96,24 @@ export default function SettingsPage() {
     setIsSaving(false)
     alert("設定を保存しました")
   }
+
+  const handleLogout = async () => {
+    await logout()
+    router.push("/")
+  }
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-secondary/20 to-primary/5">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">読み込み中...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!authUser) return null
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-primary/5">
@@ -498,11 +537,9 @@ export default function SettingsPage() {
               <CardDescription>アカウントからログアウトします</CardDescription>
             </CardHeader>
             <CardContent>
-              <Link href="/">
-                <Button variant="outline" className="w-full bg-transparent">
-                  ログアウト
-                </Button>
-              </Link>
+              <Button variant="outline" className="w-full bg-transparent" onClick={handleLogout}>
+                ログアウト
+              </Button>
             </CardContent>
           </Card>
 
