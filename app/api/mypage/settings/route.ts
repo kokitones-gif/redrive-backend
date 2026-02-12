@@ -98,8 +98,8 @@ export async function PUT(request: NextRequest) {
       message: 'Settings updated successfully',
       profile,
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Settings PUT error:', error)
-    return NextResponse.json({ error: 'Failed to update settings' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to update settings', details: error?.message || String(error) }, { status: 500 })
   }
 }
