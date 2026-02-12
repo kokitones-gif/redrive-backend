@@ -1,37 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db/database'
+import { getInstructorById, getCoursePricing, getReviewsByInstructor } from '@/lib/db/supabase-db'
 
-/**
- * GET /api/instructors/:id
- * Get instructor detail with reviews and pricing
- */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await db.init()
-
     const { id } = await params
-
-    // Get instructor with profile
-    const instructor = db.getInstructorById(id)
+    const instructor = await getInstructorById(id)
     if (!instructor) {
-      return NextResponse.json(
-        { error: 'Instructor not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Instructor not found' }, { status: 404 })
     }
-
-    // Get course pricing
-    const coursePricing = db.getCoursePricing(id)
-
-    // Get reviews
-    const reviews = db.getReviewsByInstructor(id)
-
-    // Remove sensitive data
-    const { passwordHash, ...safeInstructor } = instructor
-
+    const coursePricing = await getCoursePricing(id)
+    const reviews = await getReviewsByInstructor(id)
+    const { password_hash, ...safeInstructor } = instructor
     return NextResponse.json({
       instructor: safeInstructor,
       coursePricing,
@@ -41,9 +23,6 @@ export async function GET(
     })
   } catch (error) {
     console.error('Error fetching instructor:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch instructor' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to fetch instructor' }, { status: 500 })
   }
 }

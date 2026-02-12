@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db/database'
-import { getSession } from '@/lib/auth/session'
+import { getAllInstructors, getCoursePricing } from '@/lib/db/supabase-db'
 
 /**
  * GET /api/instructors
@@ -8,95 +7,71 @@ import { getSession } from '@/lib/auth/session'
  */
 export async function GET(request: NextRequest) {
   try {
-    // Initialize database if needed
-    await db.init()
-
     const searchParams = request.nextUrl.searchParams
 
-    // Parse query parameters
     const area = searchParams.get('area')
-    const specialty = searchParams.get('specialty')
+    const specialty = searchParams.get('specialty') || undefined
     const transmissionType = searchParams.get('transmissionType')
     const minRating = searchParams.get('minRating') ? parseFloat(searchParams.get('minRating')!) : undefined
     const maxPrice = searchParams.get('maxPrice') ? parseFloat(searchParams.get('maxPrice')!) : undefined
-    const sort = searchParams.get('sort') || 'rating' // rating|price|experience
+    const sort = searchParams.get('sort') || 'rating'
     const page = parseInt(searchParams.get('page') || '1', 10)
     const limit = parseInt(searchParams.get('limit') || '10', 10)
 
-    // Get all instructors with basic filters
-    let instructors = db.getAllInstructors({
+    let instructors = await getAllInstructors({
       specialty,
       minRating,
     })
 
-    // Apply additional filters
     if (transmissionType) {
       instructors = instructors.filter((instr) =>
-        instr.profile.transmissionTypes.includes(transmissionType as 'AT' | 'MT')
+        instr.profile.transmission_types.includes(transmissionType)
       )
     }
 
     if (area) {
       instructors = instructors.filter((instr) =>
-        instr.profile.designatedAreas.includes(area) ||
-        instr.profile.serviceAreas.includes(area)
+        instr.profile.designated_areas.includes(area) ||
+        instr.profile.service_areas.includes(area)
       )
     }
 
     if (maxPrice) {
-      const coursePricing = db.getCoursePricing(instructors[0]?.id || '')
-      const minPriceOption = coursePricing.length > 0 ? Math.min(...coursePricing.map((c) => c.price)) : 0
-      instructors = instructors.filter((instr) => {
-        const pricing = db.getCoursePricing(instr.id)
+      const pricingPromises = instructors.map(async (instr) => {
+        const pricing = await getCoursePricing(instr.id)
         if (pricing.length === 0) return true
         const minPrice = Math.min(...pricing.map((c) => c.price))
         return minPrice <= maxPrice
       })
+      const priceResults = await Promise.all(pricingPromises)
+      instructors = instructors.filter((_, i) => priceResults[i])
     }
 
-    // Sort
-    instructors.sort((a, b) => {
-      if (sort === 'rating') {
-        return b.profile.rating - a.profile.rating
-      } else if (sort === 'price') {
-        const priceA = db.getCoursePricing(a.id)[0]?.price || 0
-        const priceB = db.getCoursePricing(b.id)[0]?.price || 0
-        return priceA - priceB
-      } else if (sort === 'experience') {
-        return b.profile.experience - a.profile.experience
-      }
-      return 0
-    })
+    if (sort === 'rating') {
+      instructors.sort((a, b) => b.profile.rating - a.profile.rating)
+    } else if (sort === 'experience') {
+      instructors.sort((a, b) => b.profile.experience - a.profile.experience)
+    }
 
-    // Paginate
     const total = instructors.length
     const totalPages = Math.ceil(total / limit)
     const start = (page - 1) * limit
     const paginatedInstructors = instructors.slice(start, start + limit)
 
-    // Enrich with course pricing, remove sensitive data
-    const results = paginatedInstructors.map((instr) => {
-      const { passwordHash, ...safeUser } = instr
-      return {
-        ...safeUser,
-        coursePricing: db.getCoursePricing(instr.id),
-      }
-    })
+    const results = await Promise.all(
+      paginatedInstructors.map(async (instr) => {
+        const { password_hash, ...safeUser } = instr
+        const coursePricing = await getCoursePricing(instr.id)
+        return { ...safeUser, coursePricing }
+      })
+    )
 
     return NextResponse.json({
       data: results,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages,
-      },
+      pagination: { page, limit, total, totalPages },
     })
   } catch (error) {
     console.error('Error fetching instructors:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch instructors' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to fetch instructors' }, { status: 500 })
   }
 }

@@ -1,61 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db/database'
+import { getConversationsByUser, getUserById } from '@/lib/db/supabase-db'
 import { requireAuth } from '@/lib/auth/session'
 
-/**
- * GET /api/messages
- * Get all conversations for current user with last message preview
- */
 export async function GET(request: NextRequest) {
   try {
     const session = await requireAuth()
+    const conversations = await getConversationsByUser(session.userId)
 
-    await db.init()
+    const enriched = await Promise.all(
+      conversations.map(async (conv) => {
+        const otherUserId = session.userId === conv.student_id ? conv.instructor_id : conv.student_id
+        const otherUser = await getUserById(otherUserId)
+        const unreadCount = session.userId === conv.student_id ? conv.unread_count_student : conv.unread_count_instructor
 
-    // Get all conversations for the user
-    const conversations = db.getConversationsByUser(session.userId)
+        return {
+          ...conv,
+          otherUser: otherUser ? { id: otherUser.id, name: otherUser.name, avatar: otherUser.avatar } : null,
+          unreadCount,
+        }
+      })
+    )
 
-    // Sort by last message time descending
-    conversations.sort((a, b) => {
-      const timeA = a.lastMessageTime ? new Date(a.lastMessageTime).getTime() : 0
-      const timeB = b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : 0
-      return timeB - timeA
-    })
-
-    // Enrich with user info
-    const enriched = conversations.map((conv) => {
-      const otherUserId = session.userId === conv.studentId ? conv.instructorId : conv.studentId
-      const otherUser = db.getUserById(otherUserId)
-
-      // Get unread count for current user
-      const unreadCount = session.userId === conv.studentId ? conv.unreadCountStudent : conv.unreadCountInstructor
-
-      return {
-        ...conv,
-        otherUser: otherUser
-          ? { id: otherUser.id, name: otherUser.name, avatar: otherUser.avatar }
-          : null,
-        unreadCount,
-      }
-    })
-
-    return NextResponse.json({
-      data: enriched,
-      total: enriched.length,
-    })
+    return NextResponse.json({ data: enriched, total: enriched.length })
   } catch (error: any) {
     console.error('Error fetching conversations:', error)
-
-    if (error.message.includes('Not authenticated')) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      )
+    if (error.message?.includes('Not authenticated')) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
-
-    return NextResponse.json(
-      { error: 'Failed to fetch conversations' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to fetch conversations' }, { status: 500 })
   }
 }

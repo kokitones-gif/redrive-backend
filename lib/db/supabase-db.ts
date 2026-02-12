@@ -404,6 +404,110 @@ export async function getAvailability(
   return data || []
 }
 
+// ============= ADDITIONAL REVIEW OPERATIONS =============
+
+export async function getReviewById(id: string): Promise<DbReview | null> {
+  const { data, error } = await supabase
+    .from('reviews')
+    .select()
+    .eq('id', id)
+    .single()
+
+  if (error) return null
+  return data
+}
+
+export async function getReviewsByStudent(studentId: string): Promise<DbReview[]> {
+  const { data, error } = await supabase
+    .from('reviews')
+    .select()
+    .eq('student_id', studentId)
+    .order('created_at', { ascending: false })
+
+  if (error) return []
+  return data || []
+}
+
+// ============= ADDITIONAL CONVERSATION OPERATIONS =============
+
+export async function getConversationById(id: string): Promise<DbConversation | null> {
+  const { data, error } = await supabase
+    .from('conversations')
+    .select()
+    .eq('id', id)
+    .single()
+
+  if (error) return null
+  return data
+}
+
+export async function markMessagesAsRead(conversationId: string, userId: string): Promise<void> {
+  await supabase
+    .from('messages')
+    .update({ is_read: true })
+    .eq('conversation_id', conversationId)
+    .neq('sender_id', userId)
+
+  const conversation = await getConversationById(conversationId)
+  if (!conversation) return
+
+  if (userId === conversation.student_id) {
+    await supabase
+      .from('conversations')
+      .update({ unread_count_student: 0 })
+      .eq('id', conversationId)
+  } else {
+    await supabase
+      .from('conversations')
+      .update({ unread_count_instructor: 0 })
+      .eq('id', conversationId)
+  }
+}
+
+// ============= ADDITIONAL TIME SLOT OPERATIONS =============
+
+export async function updateAvailability(
+  instructorId: string,
+  date: string,
+  period: string,
+  isAvailable: boolean
+): Promise<DbTimeSlot> {
+  const { data, error } = await supabase
+    .from('time_slots')
+    .upsert(
+      {
+        instructor_id: instructorId,
+        date,
+        period,
+        is_available: isAvailable,
+        capacity: 2,
+      },
+      { onConflict: 'instructor_id,date,period' }
+    )
+    .select()
+    .single()
+
+  if (error) throw new Error(`Failed to update availability: ${error.message}`)
+  return data
+}
+
+// ============= INSTRUCTOR PROFILE UPDATE =============
+
+export async function updateInstructorProfile(
+  userId: string,
+  data: Partial<DbInstructorProfile>
+): Promise<DbInstructorProfile> {
+  const { data: profile, error } = await supabase
+    .from('instructor_profiles')
+    .update(data)
+    .eq('user_id', userId)
+    .select()
+    .single()
+
+  if (error) throw new Error(`Failed to update instructor profile: ${error.message}`)
+  return profile
+}
+
 // ============= COURSE PRICING =============
 
 export async function getCoursePricing(instructorId: string): Promise<DbCoursePricing[]> {
