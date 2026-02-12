@@ -237,36 +237,33 @@ export default function SettingsPage() {
                     {/* フリガナ */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="lastNameKana">セイ *</Label>
+                        <Label htmlFor="lastNameKana">セイ</Label>
                         <Input
                           id="lastNameKana"
                           value={formData.lastNameKana}
                           onChange={(e) => handleInputChange("lastNameKana", e.target.value)}
                           placeholder="ヤマダ"
-                          required
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="firstNameKana">メイ *</Label>
+                        <Label htmlFor="firstNameKana">メイ</Label>
                         <Input
                           id="firstNameKana"
                           value={formData.firstNameKana}
                           onChange={(e) => handleInputChange("firstNameKana", e.target.value)}
                           placeholder="タロウ"
-                          required
                         />
                       </div>
                     </div>
 
                     {/* 生年月日 */}
                     <div className="space-y-2">
-                      <Label htmlFor="birthdate">生年月日 *</Label>
+                      <Label htmlFor="birthdate">生年月日</Label>
                       <Input
                         id="birthdate"
                         type="date"
                         value={formData.birthdate}
                         onChange={(e) => handleInputChange("birthdate", e.target.value)}
-                        required
                       />
                     </div>
 
@@ -283,14 +280,13 @@ export default function SettingsPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="phone">電話番号 *</Label>
+                        <Label htmlFor="phone">電話番号</Label>
                         <Input
                           id="phone"
                           type="tel"
                           value={formData.phone}
                           onChange={(e) => handleInputChange("phone", e.target.value)}
                           placeholder="090-1234-5678"
-                          required
                         />
                       </div>
                     </div>
@@ -298,18 +294,17 @@ export default function SettingsPage() {
                     {/* 住所 */}
                     <div className="space-y-4">
                       <div className="space-y-2">
-                        <Label htmlFor="postalCode">郵便番号 *</Label>
+                        <Label htmlFor="postalCode">郵便番号</Label>
                         <Input
                           id="postalCode"
                           value={formData.postalCode}
                           onChange={(e) => handleInputChange("postalCode", e.target.value)}
                           placeholder="150-0001"
-                          required
                         />
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="prefecture">都道府県 *</Label>
+                          <Label htmlFor="prefecture">都道府県</Label>
                           <Select
                             value={formData.prefecture}
                             onValueChange={(value) => handleInputChange("prefecture", value)}
@@ -326,22 +321,20 @@ export default function SettingsPage() {
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="city">市区町村 *</Label>
+                          <Label htmlFor="city">市区町村</Label>
                           <Input
                             id="city"
                             value={formData.city}
                             onChange={(e) => handleInputChange("city", e.target.value)}
-                            required
                           />
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="address">番地 *</Label>
+                        <Label htmlFor="address">番地</Label>
                         <Input
                           id="address"
                           value={formData.address}
                           onChange={(e) => handleInputChange("address", e.target.value)}
-                          required
                         />
                       </div>
                       <div className="space-y-2">
@@ -367,21 +360,20 @@ export default function SettingsPage() {
                   <CardContent className="space-y-6">
                     {/* 免許証番号 */}
                     <div className="space-y-2">
-                      <Label htmlFor="licenseNumber">免許証番号 *</Label>
+                      <Label htmlFor="licenseNumber">免許証番号</Label>
                       <Input
                         id="licenseNumber"
                         value={formData.licenseNumber}
                         onChange={(e) => handleInputChange("licenseNumber", e.target.value)}
                         placeholder="12桁の番号"
                         maxLength={12}
-                        required
                       />
                     </div>
 
                     {/* 免許種別 */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="licenseType">免許種別 *</Label>
+                        <Label htmlFor="licenseType">免許種別</Label>
                         <Select
                           value={formData.licenseType}
                           onValueChange={(value) => handleInputChange("licenseType", value)}
@@ -400,7 +392,7 @@ export default function SettingsPage() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="transmissionType">AT/MT *</Label>
+                        <Label htmlFor="transmissionType">AT/MT</Label>
                         <Select
                           value={formData.transmissionType}
                           onValueChange={(value) => handleInputChange("transmissionType", value)}
@@ -422,23 +414,21 @@ export default function SettingsPage() {
                     {/* 取得年月日・有効期限 */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="licenseIssueDate">取得年月日 *</Label>
+                        <Label htmlFor="licenseIssueDate">取得年月日</Label>
                         <Input
                           id="licenseIssueDate"
                           type="date"
                           value={formData.licenseIssueDate}
                           onChange={(e) => handleInputChange("licenseIssueDate", e.target.value)}
-                          required
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="licenseExpiryDate">有効期限 *</Label>
+                        <Label htmlFor="licenseExpiryDate">有効期限</Label>
                         <Input
                           id="licenseExpiryDate"
                           type="date"
                           value={formData.licenseExpiryDate}
                           onChange={(e) => handleInputChange("licenseExpiryDate", e.target.value)}
-                          required
                         />
                       </div>
                     </div>
@@ -450,7 +440,7 @@ export default function SettingsPage() {
                         {/* 表面 */}
                         <div className="space-y-2">
                           <Label htmlFor="licenseFront" className="text-sm text-muted-foreground">
-                            表面 *
+                            表面
                           </Label>
                           <div className="border-2 border-dashed rounded-xl p-6 text-center hover:border-primary/50 transition-colors">
                             <input
@@ -490,7 +480,7 @@ export default function SettingsPage() {
                         {/* 裏面 */}
                         <div className="space-y-2">
                           <Label htmlFor="licenseBack" className="text-sm text-muted-foreground">
-                            裏面 *
+                            裏面
                           </Label>
                           <div className="border-2 border-dashed rounded-xl p-6 text-center hover:border-primary/50 transition-colors">
                             <input
