@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession, createSession } from '@/lib/auth/session'
-import { getUserById, getStudentProfile, upsertStudentProfile } from '@/lib/db/supabase-db'
+import { getStudentProfile, upsertStudentProfile } from '@/lib/db/supabase-db'
 import { supabase } from '@/lib/supabase'
 
 export async function GET() {
@@ -100,6 +100,6 @@ export async function PUT(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('Settings PUT error:', error)
-    return NextResponse.json({ error: 'Failed to update settings', details: error?.message || String(error) }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to update settings' }, { status: 500 })
   }
 }
