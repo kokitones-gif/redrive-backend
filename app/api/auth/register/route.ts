@@ -1,11 +1,11 @@
 /**
  * POST /api/auth/register
- * User registration endpoint
+ * User registration endpoint - Supabase backed
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { db } from '@/lib/db/database'
+import { createUser, getUserByEmail } from '@/lib/db/supabase-db'
 import { hashPassword } from '@/lib/auth/password'
 import { createSession } from '@/lib/auth/session'
 
@@ -20,42 +20,35 @@ const registerSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-
-    // Validate input
     const validatedData = registerSchema.parse(body)
 
-    // Initialize database
-    await db.init()
-
     // Check for duplicate email
-    const existingUser = db.getUserByEmail(validatedData.email)
+    const existingUser = await getUserByEmail(validatedData.email)
     if (existingUser) {
-      return NextResponse.json({ error: 'Email already registered' }, { status: 400 })
+      return NextResponse.json({ error: 'このメールアドレスは既に登録されています' }, { status: 400 })
     }
 
     // Hash password
     const passwordHash = hashPassword(validatedData.password)
 
-    // Create user
-    const user = db.createUser({
+    // Create user in Supabase
+    const user = await createUser({
       email: validatedData.email,
-      passwordHash,
+      password_hash: passwordHash,
       name: validatedData.name,
       role: validatedData.role,
       phone: validatedData.phone,
-      avatar: undefined,
     })
 
-    // Create session
+    // Create session cookie
     await createSession({
       userId: user.id,
       email: user.email,
       name: user.name,
-      role: user.role,
+      role: user.role as 'student' | 'instructor',
       avatar: user.avatar,
     })
 
-    // Return user data (without password) - userId matches session format
     return NextResponse.json(
       {
         user: {
@@ -78,6 +71,6 @@ export async function POST(request: NextRequest) {
     }
 
     console.error('Registration error:', error)
-    return NextResponse.json({ error: 'Registration failed' }, { status: 500 })
+    return NextResponse.json({ error: '登録に失敗しました' }, { status: 500 })
   }
 }
