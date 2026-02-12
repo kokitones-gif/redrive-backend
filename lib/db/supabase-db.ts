@@ -189,7 +189,11 @@ export async function getAllInstructors(filters?: {
   if (error) return []
 
   return (data || [])
-    .filter((u: any) => u.profile && u.profile.length > 0)
+    .filter((u: any) => {
+      if (!u.profile) return false
+      if (Array.isArray(u.profile)) return u.profile.length > 0
+      return true // single object (1-to-1 relation)
+    })
     .map((u: any) => ({
       ...u,
       profile: Array.isArray(u.profile) ? u.profile[0] : u.profile,
