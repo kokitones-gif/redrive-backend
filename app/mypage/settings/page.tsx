@@ -25,9 +25,10 @@ import { useAuth } from "@/hooks/use-auth"
 
 export default function SettingsPage() {
   const router = useRouter()
-  const { user: authUser, loading: authLoading, isAuthenticated, logout } = useAuth()
+  const { user: authUser, loading: authLoading, isAuthenticated, logout, refreshSession } = useAuth()
   const [isSaving, setIsSaving] = useState(false)
-  const [formInitialized, setFormInitialized] = useState(false)
+  const [dataLoading, setDataLoading] = useState(true)
+  const [saveMessage, setSaveMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
 
   const [formData, setFormData] = useState({
     // 基本情報
@@ -59,17 +60,48 @@ export default function SettingsPage() {
   }, [authLoading, isAuthenticated, router])
 
   useEffect(() => {
-    if (authUser && !formInitialized) {
-      const nameParts = authUser.name.split(" ")
-      setFormData((prev) => ({
-        ...prev,
-        lastName: nameParts[0] || "",
-        firstName: nameParts.slice(1).join(" ") || "",
-        email: authUser.email,
-      }))
-      setFormInitialized(true)
+    if (isAuthenticated) {
+      fetch("/api/mypage/settings")
+        .then((res) => res.json())
+        .then((data) => {
+          if (!data.error) {
+            const p = data.profile
+            const u = data.user
+            if (p) {
+              setFormData({
+                lastName: p.last_name || "",
+                firstName: p.first_name || "",
+                lastNameKana: p.last_name_kana || "",
+                firstNameKana: p.first_name_kana || "",
+                birthdate: p.birthdate || "",
+                email: u?.email || "",
+                phone: p.phone || "",
+                postalCode: p.postal_code || "",
+                prefecture: p.prefecture || "",
+                city: p.city || "",
+                address: p.address || "",
+                building: p.building || "",
+                licenseNumber: p.license_number || "",
+                licenseType: p.license_type || "普通自動車第一種",
+                transmissionType: p.transmission_type || "AT",
+                licenseIssueDate: p.license_issue_date || "",
+                licenseExpiryDate: p.license_expiry_date || "",
+              })
+            } else if (u) {
+              const nameParts = (u.name || "").split(" ")
+              setFormData((prev) => ({
+                ...prev,
+                lastName: nameParts[0] || "",
+                firstName: nameParts.slice(1).join(" ") || "",
+                email: u.email || "",
+              }))
+            }
+          }
+        })
+        .catch(console.error)
+        .finally(() => setDataLoading(false))
     }
-  }, [authUser, formInitialized])
+  }, [isAuthenticated])
 
   const [licenseFrontImage, setLicenseFrontImage] = useState<File | null>(null)
   const [licenseBackImage, setLicenseBackImage] = useState<File | null>(null)
@@ -89,12 +121,28 @@ export default function SettingsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSaving(true)
+    setSaveMessage(null)
 
-    // 保存処理のシミュレーション
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    try {
+      const res = await fetch("/api/mypage/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      })
+      const data = await res.json()
 
-    setIsSaving(false)
-    alert("設定を保存しました")
+      if (res.ok) {
+        setSaveMessage({ type: "success", text: "設定を保存しました" })
+        await refreshSession()
+      } else {
+        setSaveMessage({ type: "error", text: data.error || "保存に失敗しました" })
+      }
+    } catch {
+      setSaveMessage({ type: "error", text: "ネットワークエラーが発生しました" })
+    } finally {
+      setIsSaving(false)
+      setTimeout(() => setSaveMessage(null), 4000)
+    }
   }
 
   const handleLogout = async () => {
@@ -102,7 +150,7 @@ export default function SettingsPage() {
     router.push("/")
   }
 
-  if (authLoading) {
+  if (authLoading || (isAuthenticated && dataLoading)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-secondary/20 to-primary/5">
         <div className="flex flex-col items-center gap-4">
@@ -517,6 +565,17 @@ export default function SettingsPage() {
             </Tabs>
 
             {/* 保存ボタン */}
+            {saveMessage && (
+              <div
+                className={`mt-4 p-3 rounded-lg text-sm font-medium ${
+                  saveMessage.type === "success"
+                    ? "bg-green-50 text-green-700 border border-green-200"
+                    : "bg-red-50 text-red-700 border border-red-200"
+                }`}
+              >
+                {saveMessage.text}
+              </div>
+            )}
             <div className="flex justify-end gap-4 mt-6">
               <Link href="/mypage">
                 <Button type="button" variant="outline">
@@ -524,7 +583,11 @@ export default function SettingsPage() {
                 </Button>
               </Link>
               <Button type="submit" disabled={isSaving}>
-                <Save className="h-4 w-4 mr-2" />
+                {isSaving ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4 mr-2" />
+                )}
                 {isSaving ? "保存中..." : "変更を保存"}
               </Button>
             </div>

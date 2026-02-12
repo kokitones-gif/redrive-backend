@@ -523,3 +523,56 @@ export async function getCoursePricing(instructorId: string): Promise<DbCoursePr
   if (error) return []
   return data || []
 }
+
+// ============= STUDENT PROFILES =============
+
+export interface DbStudentProfile {
+  id: string
+  user_id: string
+  last_name: string
+  first_name: string
+  last_name_kana: string
+  first_name_kana: string
+  birthdate: string | null
+  phone: string
+  postal_code: string
+  prefecture: string
+  city: string
+  address: string
+  building: string
+  license_number: string
+  license_type: string
+  transmission_type: string
+  license_issue_date: string | null
+  license_expiry_date: string | null
+  created_at: string
+  updated_at: string
+}
+
+export async function getStudentProfile(userId: string): Promise<DbStudentProfile | null> {
+  const { data, error } = await supabase
+    .from('student_profiles')
+    .select()
+    .eq('user_id', userId)
+    .single()
+
+  if (error) return null
+  return data
+}
+
+export async function upsertStudentProfile(
+  userId: string,
+  profileData: Partial<DbStudentProfile>
+): Promise<DbStudentProfile> {
+  const { data, error } = await supabase
+    .from('student_profiles')
+    .upsert(
+      { ...profileData, user_id: userId, updated_at: new Date().toISOString() },
+      { onConflict: 'user_id' }
+    )
+    .select()
+    .single()
+
+  if (error) throw new Error(`Failed to upsert student profile: ${error.message}`)
+  return data
+}
