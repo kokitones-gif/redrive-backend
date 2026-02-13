@@ -3,22 +3,11 @@
  * DELETE THIS FILE AFTER MIGRATION
  */
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
 
 export async function POST() {
   try {
-    // Step 1: Try to drop the existing bookings table by deleting all rows first
-    // Then we'll recreate it without UUID FK constraint on instructor_id
-
-    // First, check if table exists by trying to query it
-    const { data: existingBookings, error: checkError } = await supabase
-      .from('bookings')
-      .select('id')
-      .limit(1)
-
-    // Try using supabase's raw SQL via the pg-meta endpoint
-    const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://lswzvdehnzreoctrjjrv.supabase.co'
-    const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
     const sql = `
       DROP TABLE IF EXISTS bookings CASCADE;
@@ -34,6 +23,8 @@ export async function POST() {
         use_instructor_vehicle BOOLEAN DEFAULT FALSE,
         total_price INTEGER,
         notes TEXT,
+        instructor_name TEXT,
+        instructor_avatar TEXT,
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
@@ -44,40 +35,44 @@ export async function POST() {
       NOTIFY pgrst, 'reload schema';
     `
 
-    // Try multiple endpoints that Supabase might support
+    // Try Supabase pg-meta endpoint (used by SQL Editor)
     const endpoints = [
-      `${SUPABASE_URL}/rest/v1/rpc/exec_sql`,
-      `${SUPABASE_URL}/pg/query`,
+      { url: `${SUPABASE_URL}/pg-meta/default/query`, body: { query: sql } },
+      { url: `${SUPABASE_URL}/rest/v1/rpc/exec_sql`, body: { query: sql } },
     ]
 
     const results: any[] = []
+    let success = false
 
-    for (const endpoint of endpoints) {
+    for (const ep of endpoints) {
       try {
-        const res = await fetch(endpoint, {
+        const res = await fetch(ep.url, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${SERVICE_KEY}`,
             'apikey': SERVICE_KEY,
+            'X-Connection-Encrypted': '1',
           },
-          body: JSON.stringify({ query: sql }),
+          body: JSON.stringify(ep.body),
         })
         const text = await res.text()
-        results.push({ endpoint, status: res.status, body: text.substring(0, 500) })
-        if (res.ok) break
+        results.push({ endpoint: ep.url, status: res.status, body: text.substring(0, 500) })
+        if (res.ok) {
+          success = true
+          break
+        }
       } catch (e: any) {
-        results.push({ endpoint, error: e.message })
+        results.push({ endpoint: ep.url, error: e.message })
       }
     }
 
-    return NextResponse.json({
-      message: 'Migration attempted',
-      tableExists: !checkError,
-      checkError: checkError?.message,
-      results,
-    })
+    return NextResponse.json({ success, results })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
+}
+
+export async function GET() {
+  return NextResponse.json({ message: 'POST to run migration' })
 }

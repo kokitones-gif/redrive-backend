@@ -44,6 +44,8 @@ export interface DbBooking {
   id: string
   student_id: string
   instructor_id: string
+  instructor_name?: string | null
+  instructor_avatar?: string | null
   date: string
   time_slot: string
   location: string

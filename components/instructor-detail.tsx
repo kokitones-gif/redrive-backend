@@ -6,7 +6,7 @@ import { AvatarImage } from "@/components/ui/avatar"
 
 import { Avatar } from "@/components/ui/avatar"
 
-import { useState, useEffect, useMemo, useCallback } from "react"
+import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
 import Image from "next/image"
@@ -43,6 +43,7 @@ export function InstructorDetail({ instructor }: InstructorDetailProps) {
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<"morning" | "afternoon" | "evening" | null>(null)
   const [useInstructorVehicle, setUseInstructorVehicle] = useState(false)
   const [currentWeekStart, setCurrentWeekStart] = useState(new Date())
+  const [isBooking, setIsBooking] = useState(false)
 
   // テスト用：現在のログインユーザー（山田太郎 = studentId: "1"）
   const currentStudentId = "1"
@@ -103,7 +104,7 @@ export function InstructorDetail({ instructor }: InstructorDetailProps) {
     [instructor.timeSlotCapacity, instructor.scheduledLessons],
   )
 
-  const handleBooking = useCallback(() => {
+  const handleBooking = useCallback(async () => {
     if (selectedLocation && selectedDate && selectedTimeSlot && selectedCourse) {
       // 未ログインの場合は会員登録ページへリダイレクト
       if (!user) {
@@ -118,9 +119,37 @@ export function InstructorDetail({ instructor }: InstructorDetailProps) {
       const vehicleFee = useInstructorVehicle ? instructor.vehicleFee || 0 : 0
       const total = selectedCourse.price + travelFee + vehicleFee
 
-      router.push(
-        `/booking/complete?instructor=${instructor.id}&location=${encodeURIComponent(selectedLocation)}&date=${selectedDate}&timeSlot=${selectedTimeSlot}&course=${encodeURIComponent(selectedCourse.name)}&useVehicle=${useInstructorVehicle}&total=${total}`,
-      )
+      setIsBooking(true)
+      try {
+        const res = await fetch("/api/bookings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            instructorId: instructor.id,
+            instructorName: instructor.name,
+            instructorAvatar: instructor.avatar,
+            date: selectedDate,
+            timeSlot: selectedTimeSlot,
+            location: selectedLocation,
+            courseName: selectedCourse.name,
+            useInstructorVehicle,
+            totalPrice: total,
+          }),
+        })
+        const data = await res.json()
+
+        if (res.ok) {
+          router.push(
+            `/booking/complete?instructor=${instructor.id}&location=${encodeURIComponent(selectedLocation)}&date=${selectedDate}&time=${selectedTimeSlot}&course=${encodeURIComponent(selectedCourse.name)}&useVehicle=${useInstructorVehicle}&total=${total}`,
+          )
+        } else {
+          alert(data.error || "予約に失敗しました")
+        }
+      } catch {
+        alert("ネットワークエラーが発生しました")
+      } finally {
+        setIsBooking(false)
+      }
     }
   }, [selectedLocation, selectedDate, selectedTimeSlot, selectedCourse, useInstructorVehicle, instructor, router, user])
 
@@ -784,10 +813,10 @@ export function InstructorDetail({ instructor }: InstructorDetailProps) {
 
                 <Button
                   onClick={handleBooking}
-                  disabled={!selectedLocation || !selectedDate || !selectedTimeSlot || !selectedCourse}
+                  disabled={!selectedLocation || !selectedDate || !selectedTimeSlot || !selectedCourse || isBooking}
                   className="w-full h-14 text-lg font-bold bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >
-                  {user ? "予約リクエストを送る" : "会員登録して予約する"}
+                  {isBooking ? "予約中..." : user ? "予約リクエストを送る" : "会員登録して予約する"}
                 </Button>
               </CardContent>
             </Card>

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getBookingsByStudent, getBookingsByInstructor, getUserById, getInstructorById, getCoursePricing, getAvailability, createBooking } from '@/lib/db/supabase-db'
+import { getBookingsByStudent, getBookingsByInstructor, getUserById, createBooking } from '@/lib/db/supabase-db'
 import { requireAuth, requireRole } from '@/lib/auth/session'
 
 export async function GET(request: NextRequest) {
@@ -24,13 +24,31 @@ export async function GET(request: NextRequest) {
     bookings.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
     const enriched = await Promise.all(
-      bookings.map(async (booking) => {
+      bookings.map(async (booking: any) => {
         const student = await getUserById(booking.student_id)
-        const instructor = await getUserById(booking.instructor_id)
+        // Try to get instructor from users table, fall back to stored data
+        let instructorData = null
+        try {
+          const instructor = await getUserById(booking.instructor_id)
+          if (instructor) {
+            instructorData = { id: instructor.id, name: instructor.name, avatar: instructor.avatar }
+          }
+        } catch {
+          // instructor_id is not a UUID, use stored data
+        }
+
+        if (!instructorData) {
+          instructorData = {
+            id: booking.instructor_id,
+            name: booking.instructor_name || `講師 ${booking.instructor_id}`,
+            avatar: booking.instructor_avatar || '/placeholder.svg',
+          }
+        }
+
         return {
           ...booking,
           student: student ? { id: student.id, name: student.name, avatar: student.avatar } : null,
-          instructor: instructor ? { id: instructor.id, name: instructor.name, avatar: instructor.avatar } : null,
+          instructor: instructorData,
         }
       })
     )
@@ -49,36 +67,25 @@ export async function POST(request: NextRequest) {
   try {
     const session = await requireRole('student')
     const body = await request.json()
-    const { instructorId, date, timeSlot, location, courseName, useInstructorVehicle, notes, totalPrice } = body
+    const { instructorId, instructorName, instructorAvatar, date, timeSlot, location, courseName, useInstructorVehicle, notes, totalPrice } = body
 
     if (!instructorId || !date || !timeSlot || !location) {
       return NextResponse.json({ error: 'Missing required fields: instructorId, date, timeSlot, location' }, { status: 400 })
     }
 
-    const instructor = await getInstructorById(instructorId)
-    if (!instructor) {
-      return NextResponse.json({ error: 'Instructor not found' }, { status: 404 })
-    }
-
-    const slots = await getAvailability(instructorId, date, date)
-    if (slots.length > 0) {
-      const slotAvailable = slots.find((s) => s.period === timeSlot && s.is_available)
-      if (!slotAvailable) {
-        return NextResponse.json({ error: 'Time slot not available' }, { status: 400 })
-      }
-    }
-
     const booking = await createBooking({
       student_id: session.userId,
-      instructor_id: instructorId,
+      instructor_id: String(instructorId),
       date,
       time_slot: timeSlot,
       location,
-      course_name: courseName,
+      course_name: courseName || null,
       status: 'pending',
       use_instructor_vehicle: useInstructorVehicle || false,
-      total_price: totalPrice,
-      notes,
+      total_price: totalPrice || null,
+      notes: notes || null,
+      instructor_name: instructorName || null,
+      instructor_avatar: instructorAvatar || null,
     })
 
     return NextResponse.json({ message: 'Booking created successfully', booking }, { status: 201 })

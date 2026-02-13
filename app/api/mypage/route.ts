@@ -15,17 +15,39 @@ export async function GET(request: NextRequest) {
     pastBookings.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
     const enrichBooking = async (booking: any) => {
-      const instructor = await getUserById(booking.instructor_id)
-      const profile = await getInstructorProfile(booking.instructor_id)
+      // Try to get instructor from users table, fall back to stored booking data
+      let instructorData = null
+      let profileData = null
+      try {
+        const instructor = await getUserById(booking.instructor_id)
+        if (instructor) {
+          instructorData = { id: instructor.id, name: instructor.name, avatar: instructor.avatar }
+          const profile = await getInstructorProfile(booking.instructor_id)
+          if (profile) {
+            profileData = { rating: profile.rating, experience: profile.experience }
+          }
+        }
+      } catch {
+        // instructor_id is not a UUID - use stored data from booking record
+      }
+
+      if (!instructorData) {
+        instructorData = {
+          id: booking.instructor_id,
+          name: booking.instructor_name || `講師 ${booking.instructor_id}`,
+          avatar: booking.instructor_avatar || '/placeholder.svg',
+        }
+      }
+
       return {
         ...booking,
-        instructor: instructor ? { id: instructor.id, name: instructor.name, avatar: instructor.avatar } : null,
-        instructorProfile: profile ? { rating: profile.rating, experience: profile.experience } : null,
+        instructor: instructorData,
+        instructorProfile: profileData,
       }
     }
 
     const reviews = await getReviewsByStudent(session.userId)
-    const coursesCount = new Set(pastBookings.map((b) => b.course_name)).size
+    const coursesCount = new Set(pastBookings.map((b: any) => b.course_name)).size
 
     return NextResponse.json({
       student: session,
