@@ -73,8 +73,20 @@ const BookingCard = memo(function BookingCard({
                   {booking.course}
                 </p>
               </div>
-              <Badge variant={type === "past" ? "secondary" : "default"} className="shrink-0">
-                {type === "past" ? "完了" : "確定"}
+              <Badge
+                variant={
+                  booking.status === "confirmed" ? "default" :
+                  booking.status === "completed" ? "secondary" :
+                  booking.status === "cancelled" ? "destructive" :
+                  "outline"
+                }
+                className="shrink-0"
+              >
+                {booking.status === "confirmed" ? "確定" :
+                 booking.status === "completed" ? "完了" :
+                 booking.status === "cancelled" ? "キャンセル" :
+                 booking.status === "pending" ? "保留中" :
+                 booking.status}
               </Badge>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">

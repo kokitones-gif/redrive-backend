@@ -8,8 +8,8 @@ export async function GET(request: NextRequest) {
     const allBookings = await getBookingsByStudent(session.userId)
 
     const today = new Date().toISOString().split('T')[0] // "2026-02-13" format
-    const upcomingBookings = allBookings.filter((b) => b.date >= today && !['cancelled', 'rejected'].includes(b.status))
-    const pastBookings = allBookings.filter((b) => b.date < today || b.status === 'completed')
+    const upcomingBookings = allBookings.filter((b) => b.date >= today && !['cancelled', 'rejected', 'completed'].includes(b.status))
+    const pastBookings = allBookings.filter((b) => b.date < today || ['completed', 'cancelled', 'rejected'].includes(b.status))
 
     upcomingBookings.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     pastBookings.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
