@@ -98,10 +98,36 @@ function BookingConfirmContent() {
 
   const handleSubmit = async () => {
     setIsSubmitting(true)
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-    router.push(
-      `/booking/complete?instructor=${instructorId}&date=${date}&time=${time}&total=${totalAmount}&course=${courseIndex}&meetingPoint=${selectedMeetingPoint}`,
-    )
+    try {
+      const res = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          instructorId: instructor.id,
+          instructorName: instructor.name,
+          instructorAvatar: instructor.avatar,
+          date,
+          timeSlot: time,
+          location: selectedMeetingPoint,
+          courseName: selectedCourse.name,
+          useInstructorVehicle,
+          totalPrice: totalAmount,
+          notes: message || null,
+        }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        router.push(
+          `/booking/complete?instructor=${instructorId}&date=${date}&time=${time}&total=${totalAmount}&course=${courseIndex}&meetingPoint=${encodeURIComponent(selectedMeetingPoint)}`,
+        )
+      } else {
+        alert(data.error || "予約に失敗しました")
+      }
+    } catch {
+      alert("ネットワークエラーが発生しました")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
