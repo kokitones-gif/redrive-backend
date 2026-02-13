@@ -7,9 +7,9 @@ export async function GET(request: NextRequest) {
     const session = await requireRole('student')
     const allBookings = await getBookingsByStudent(session.userId)
 
-    const now = new Date().toISOString()
-    const upcomingBookings = allBookings.filter((b) => b.date >= now && !['cancelled', 'rejected'].includes(b.status))
-    const pastBookings = allBookings.filter((b) => b.date < now || b.status === 'completed')
+    const today = new Date().toISOString().split('T')[0] // "2026-02-13" format
+    const upcomingBookings = allBookings.filter((b) => b.date >= today && !['cancelled', 'rejected'].includes(b.status))
+    const pastBookings = allBookings.filter((b) => b.date < today || b.status === 'completed')
 
     upcomingBookings.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     pastBookings.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
