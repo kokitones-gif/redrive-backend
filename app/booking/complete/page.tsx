@@ -158,7 +158,7 @@ function BookingCompleteContent() {
               variant="outline"
               className="flex-1 gap-2 border-2 border-primary/30 hover:bg-primary/5 bg-transparent"
             >
-              <Link href="#">
+              <Link href="/mypage">
                 <User className="h-4 w-4" />
                 マイページ
               </Link>
